@@ -47,18 +47,18 @@ var mqtt    = require('mqtt');
 
 var client  = mqtt.connect(endpoint, options);
 
-var lp1	 = 78.00;
-var flag; 
-function rn(){
-	return Math.floor(Math.random() * (1000 - 100) + 100) / 10;
-};
+var lp1	 = 35.00;
+ 
+var flag;
+
+
 client.on('connect', function send (e) {
 	
     console.log('connected!');
 
-	level = (lp1 - 2.25);
-
-	var data = {"mode":"async","messageType":"e5ea0acdec831c5f0d3a","messages":[{"timestamp":1413191650,"name":'P2',"level":level}]};
+	level = (lp1 - 2.5);
+	if(level > 0 ){
+	var data = {"mode":"async","messageType":"e5ea0acdec831c5f0d3a","messages":[{"timestamp":ts(),"name":'P2',"level":level}]};
 
 	client.publish('iot/data/'+my_device_id, JSON.stringify(data));
 	
@@ -68,12 +68,13 @@ client.on('connect', function send (e) {
 
 	console.log(lp1);
 
-	if(lp1 <= 70 && flag != 'X'){
+	if(lp1 <= 20 && flag != 'X'){
 		so();
 	}
 	
-	setTimeout(send,2000);
-});
+	setTimeout(send,3000);
+	}
+	});
 
 client.on('error', function (e) {
 
@@ -108,7 +109,7 @@ var Request = require("request"),
 	auth = 'Basic ' + new Buffer('tsharma:sap@abap12').toString("base64"),j = Request.jar();
 	
 var options = {
-    url: 'https://192.168.139.61/sap/opu/odata/sap/ZTEST_NEW_SRV/TRIGGERSet?$format=json',
+    url: "https://192.168.139.61/sap/opu/odata/sap/ZSO_IOT_REV_SRV/TriggerSet(SENSOR='PP1')?$format=json",
 	jar: j,
 	rejectUnauthorized:false,
               headers:{
@@ -116,22 +117,28 @@ var options = {
 				'accept': 'application/json',
       		    "Authorization":auth,
 				"x-csrf-token":"fetch"
-
               }
 	};
 
 Request.get(options, (error, response, body) => {
     if(error) {
 		console.log('error');
-    }
-	var token = response.headers["x-csrf-token"];
+	} 
+	else { 
+	if(response.statusCode == 200){
+		console.log(response.body);
+		var d = JSON.parse(response.body);
+		var fw = d.d.SENSOR;
+		if(fw == 'Y'){
+		var token = response.headers["x-csrf-token"];
 	console.log(token);
 	var data = {};
-	data.SENSOR = 'P2';
+	data.SENSOR = 'PP2';
 	data.WEIGHT =  lp1;
-	data.TIMESTAMP = '2018-12-26T15:25:00';//Date.now();l
+	data.TOLERANCE = lp1;
+	data.TIMESTAMP = ts(); //'2018-12-26T15:24:00';//Date.now();l
                     Request({
-                                    url:'https://192.168.139.61/sap/opu/odata/sap/ZTEST_NEW_SRV/TRIGGERSet',
+                                    url: 'https://192.168.139.61/sap/opu/odata/sap/ZSO_IOT_REV_SRV/TriggerSet',
                                     method: 'POST',
                                     jar: j,
 									rejectUnauthorized:false,
@@ -145,7 +152,33 @@ Request.get(options, (error, response, body) => {
                                   if(!error) {
 								  console.log(response.status);flag = 'X';}
 								  else {console.log(error)}
-//                                  resolve();
-                            });	
-});	
+                            });
+							
+	}
+							}}
+});
+}
+
+function ts(){
+
+	var dt = new Date(),
+	current_date = dt.getDate(),
+	current_month = dt.getMonth() + 1,
+	current_year = dt.getFullYear(),
+	current_hrs = dt.getHours(),
+	current_mins = dt.getMinutes(),
+	current_secs = dt.getSeconds(),
+	current_datetime;
+
+// Add 0 before date, month, hrs, mins or secs if they are less than 0
+	current_date = current_date < 10 ? '0' + current_date : current_date;
+	current_month = current_month < 10 ? '0' + current_month : current_month;
+	current_hrs = current_hrs < 10 ? '0' + current_hrs : current_hrs;
+	current_mins = current_mins < 10 ? '0' + current_mins : current_mins;
+	current_secs = current_secs < 10 ? '0' + current_secs : current_secs;
+
+// Current datetime
+// String such as 2016-07-16T19:20:30
+	current_datetime = current_year + '-' + current_month + '-' + current_date + 'T' + current_hrs + ':' + current_mins + ':' + current_secs;
+	return current_datetime;
 };
